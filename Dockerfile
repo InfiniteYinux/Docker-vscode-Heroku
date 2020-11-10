@@ -1,7 +1,7 @@
 FROM debian:latest
 LABEL MAINTAINER="YINUXY <admin@yinuxy.com>"
 
-ENV PASSWORD=Password
+ENV PASSWORD=yinxuy
 
 WORKDIR /app
 
@@ -12,4 +12,4 @@ RUN apt update -y \
 
 EXPOSE $PORT
 
-CMD /app/code-server-3.6.2-linux-amd64/code-server --bind-addr 0.0.0.0:$PORT --auth password
+CMD /app/code-server-3.6.2-linux-amd64/code-server --bind-addr 0.0.0.0:$PORT --auth PASSWORD
