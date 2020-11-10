@@ -6,7 +6,7 @@ ENV PASSWORD=yinxuy
 WORKDIR /app
 
 RUN apt update -y \
-  && apt install git wget curl -y \
+  && apt install git wget curl python3 -y \
   && wget https://github.com/cdr/code-server/releases/download/v3.6.2/code-server-3.6.2-linux-amd64.tar.gz \
   && tar -zxvf code-server-3.6.2-linux-amd64.tar.gz
 
