@@ -1,15 +1,42 @@
-FROM debian:latest
-LABEL MAINTAINER="YINUXY <admin@yinuxy.com>"
+FROM golang:alpine as builder
 
-ENV PASSWORD=yinxuy
+ENV GO111MODULE=on
+
+ENV GOPROXY=https://goproxy.io,direct
 
 WORKDIR /app
 
-RUN apt update -y \
-  && apt install git wget curl python3 -y \
-  && wget https://github.com/cdr/code-server/releases/download/v3.6.2/code-server-3.6.2-linux-amd64.tar.gz \
-  && tar -zxvf code-server-3.6.2-linux-amd64.tar.gz
+COPY . .
 
-EXPOSE $PORT
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+RUN apk add gcc g++
+RUN go env && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -ldflags '-linkmode external -extldflags "-static"' -o next-terminal main.go
 
-CMD /app/code-server-3.6.2-linux-amd64/code-server --bind-addr 0.0.0.0:$PORT --auth PASSWORD
+FROM guacamole/guacd:1.2.0
+
+LABEL MAINTAINER="helloworld1024@foxmail.com"
+
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update && apt-get -y install supervisor
+RUN mkdir -p /var/log/supervisor
+COPY --from=builder /app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+ENV DB sqlite
+ENV SQLITE_FILE 'next-terminal.db'
+ENV SERVER_PORT 8088
+ENV SERVER_ADDR 0.0.0.0:$SERVER_PORT
+ENV TIME_ZONE=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TIME_ZONE /etc/localtime && echo $TIME_ZONE > /etc/timezone
+
+WORKDIR /usr/local/next-terminal
+
+COPY --from=builder /app/next-terminal ./
+COPY --from=builder /app/web/build ./web/build
+COPY --from=builder /app/web/src/fonts/Menlo-Regular-1.ttf /usr/share/fonts/
+
+RUN mkfontscale && mkfontdir && fc-cache
+
+EXPOSE $SERVER_PORT
+
+RUN mkdir recording && mkdir drive
+ENTRYPOINT /usr/bin/supervisord
